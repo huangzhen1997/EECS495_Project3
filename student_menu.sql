@@ -7,7 +7,7 @@ create procedure student_menu(
 )
 begin
 select UoSCode from transcript where 
-Studid = sid and Year = y and Semester = sem;
+Studid = sid and Year = y and Semester = sem and grade is null;
 end $$
 delimiter ;
 
