@@ -5,12 +5,17 @@ create procedure course_detail(
     in cid char(20)
 )
 begin
-	select c.UoSCode,c.UoSName,r.Year,r.semester,r.Grade,o.Name,o.Enrollment,o.MaxEnrollment
-    from (select us.UoSCode,us.UoSName from unitofstudy as us where us.UoSCode = cid) as c,
-    (select Name,UoSCode,Year,Grade,Semester from student natural join transcript where id = sid order by Year) as r,
-    (SELECT u.UoSCode,f.Name,u.Enrollment,u.MaxEnrollment,u.year,u.Semester FROM uosoffering as u,faculty as f where u.InstructorID = f.id and u.UoSCode = cid) as o
-    where c.UoSCode = r.UoSCode and o.year = r.year and o.Semester = r.Semester;
-
+	
+select o.UoSCode,u.UoSName, o.Enrollment,o.MaxEnrollment,o.Year,o.Semester,f.Name
+ from unitofstudy as u
+ inner join uosoffering as o
+	on o.UoSCode=u.UoSCode
+inner join faculty as f
+	on o.InstructorId = f.id
+inner join transcript as t
+	on t.UoSCode = o.UoSCode and o.Semester = t.Semester and o.year = t.year
+where t.Studid = sid and u.UoSCode = cid;
+ 
 end $$
 delimiter ;
 
