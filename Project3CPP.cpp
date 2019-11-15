@@ -236,7 +236,7 @@ void Transcript() {
 				return;
 			}
 		}
-
+		cout << "Input accepted!" << endl;
 		sprintf_s(query, sizeof(query), "CALL course_detail(%d,\"%s\")", userid, input.c_str());
 		res_set = ExecuteQuery(query);
 		cout << "Course Code, Course Title, Year, Semester, Grade, Name, Enrollment, Max Enrollment" << endl;
@@ -249,8 +249,74 @@ void Transcript() {
 }
 
 void Enroll() {
+	MYSQL_RES * res_set;
 	cout << "<Enroll>" << endl;
-	// TODO: Fill out enroll queries with procedure call
+	cout << "Courses Offered" << endl;
+	char query[256];
+	string all_courses = "";
+	string inputCode, inputYear, inputSem;
+	sprintf_s(query, sizeof(query), "CALL ShowOfferings()");
+	res_set = ExecuteQuery(query);
+
+	int num_rows = (int)mysql_num_rows(res_set);
+	int num_cols = (int)mysql_num_fields(res_set);
+	MYSQL_ROW row;
+	for (int i = 0; i < num_rows; i++) {
+		row = mysql_fetch_row(res_set);
+		if (row != NULL) {
+			all_courses += "|" + string(row[0]) + string(row[1]) + string(row[2]) + "|";
+			for (int j = 0; j < num_cols; j++) {
+				printf("%-.20s ", row[j]);
+			}
+			cout << endl;
+		}
+	}
+	while (mysql_next_result(conn) == 0);
+	mysql_free_result(res_set);
+	UserPause();
+	inputCode = "x";
+	inputYear = "y";
+	inputSem = "z";
+	
+	while (1) {
+		
+		while (1) {
+			cout << "Enter a course code, year, and semester (q to quit)" << endl;
+			cout << "course code: ";
+			getline(cin, inputCode);
+			cout << "year: ";
+			getline(cin, inputYear);
+			cout << "semester: ";
+			getline(cin, inputSem);
+			if (!inputCode.compare("q") || !inputYear.compare("q") || !inputSem.compare("q"))
+				return;
+			if (all_courses.find(inputCode + inputSem + inputYear) == string::npos)
+				cout << "bad input combination" << endl;
+			else
+				break;
+		}
+		cout << "Input accepted!" << endl;
+		sprintf_s(query, sizeof(query), "CALL EnrollStudent(%d,\"%s\",\"%s\",%s)",
+			userid,	
+			inputCode.c_str(),
+			inputSem.c_str(),
+			inputYear.c_str());
+		res_set = ExecuteQuery(query);
+		if (res_set && mysql_num_rows(res_set) > 0) {
+			cout << inputCode << endl;
+			cout << "Some requirements were not met:" << endl;
+			PrintQuery(res_set);
+		}
+		else {
+			cout << "Enrollment successful" << endl;
+		}
+		while (mysql_next_result(conn) == 0);
+		mysql_free_result(res_set);
+		inputCode = "x";
+		inputYear = "y";
+		inputSem = "z";
+	}
+	
 	UserPause();
 }
 
