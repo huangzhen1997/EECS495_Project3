@@ -1,13 +1,17 @@
 delimiter $$
 drop procedure if exists student_menu $$
 create procedure student_menu(
-	in sid char(20),
-	in y char(20),
-	in sem char(20)
+	in sid int,
+	in y int,
+	in sem char(5)
 )
 begin
-select UoSCode from transcript where 
-Studid = sid and Year = y and Semester = sem and grade is null;
+select t1.UoSCode,t2.UoSName from transcript as t1 inner join unitofstudy as t2 
+on t1.UoSCode = t2.UoSCode
+where t1.Studid = sid and t1.Year = y and t1.Semester = sem and t1.grade is null;
 end $$
 delimiter ;
+
+call student_menu(3213,2019,'Q1')
+
 
