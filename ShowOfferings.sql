@@ -8,7 +8,7 @@ DECLARE nextYear int;
 DECLARE nextSem char(20);
 
 SET curYear = year(curdate());
-IF month(curdate()) BETWEEN 8 and 12
+IF month(curdate()) BETWEEN 7 and 12
 THEN
 	SET curSem = "Q2";
     SET nextYear = curYear + 1;
@@ -29,3 +29,5 @@ OR
 
 end $$
 delimiter ;
+
+CALL ShowOfferings();

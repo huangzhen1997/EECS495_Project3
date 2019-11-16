@@ -7,33 +7,40 @@ create procedure EnrollStudent (
     in y int
 )
 begin
-IF NOT EXISTS (SELECT * 
-				FROM
-				requires r
-				WHERE
-				r.UoSCode = ccode
-				AND r.PrereqUoSCode not in 
-				(SELECT 
-					UoSCode
-				FROM
-					transcript
-				WHERE
-					StudId = sid 
-					AND grade IS NOT NULL
-					AND grade != 'D'))
+
+IF EXISTS (SELECT * 
+			FROM
+			requires r
+			WHERE
+			r.UoSCode = ccode
+			AND r.PrereqUoSCode not in 
+			(SELECT 
+				UoSCode
+			FROM
+				transcript
+			WHERE
+				StudId = sid 
+				AND grade IS NOT NULL))
 THEN
-	IF NOT EXISTS (select * from transcript
-    where StudId = sid and UoSCode = ccode and Semester = sem and Year = y)
-    THEN
-		INSERT INTO transcript value(sid,ccode,sem,y,null);
-		UPDATE uosoffering 
-		SET Enrollment = Enrollment + 1
-		WHERE UoSCode = ccode AND Year = y AND Semester = sem;
-    END IF;
-ELSE
 	SELECT PrereqUoSCode
 	FROM requires
 	WHERE UoSCode = ccode;
+ELSEIF 	EXISTS (select * from transcript
+		where StudId = sid and UoSCode = ccode and Semester = sem and Year = y)
+THEN
+	SELECT "You are already enrolled in this course";
+ELSEIF ((select Enrollment from uosoffering WHERE UoSCode = ccode AND Year = y AND Semester = sem)
+		>=
+		(select MaxEnrollment from uosoffering WHERE UoSCode = ccode AND Year = y AND Semester = sem))
+THEN
+	SELECT "Maximum capacity reached";
+ELSE
+	START TRANSACTION;
+	INSERT INTO transcript value(sid,ccode,sem,y,null);
+	UPDATE uosoffering 
+	SET Enrollment = Enrollment + 1
+	WHERE UoSCode = ccode AND Year = y AND Semester = sem;
+    COMMIT;
 END IF;
 end $$
 delimiter ;
