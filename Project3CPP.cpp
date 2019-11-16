@@ -7,6 +7,7 @@
 #include <iostream>
 #include <string>
 #include "mysql.h"
+#include <unordered_map>
 
 using namespace std;
 
@@ -49,8 +50,9 @@ int main(int argc, char * argv[])
 	localtime_s(&timeinfo, &rawtime);
 	cout << "Current year : " << timeinfo.tm_year + 1900 << endl;
 	cout << "Current month: " << timeinfo.tm_mon + 1 << endl;
+	int curMonth = timeinfo.tm_mon + 1;
 	currentYear = timeinfo.tm_year + 1900;
-	currentQuarter[1] = '1';
+	currentQuarter[1] = curMonth < 7 ? '1' : '2';
 	
 	userid = 0;
 	while (1) {
@@ -62,33 +64,9 @@ int main(int argc, char * argv[])
 	mysql_close(conn);
 }
 
-void GetQuery(char * query) {
-	MYSQL_RES *res_set;
-	MYSQL_ROW row;
-	mysql_query(conn, query);
-	res_set = mysql_store_result(conn);
-
-	int num_rows = (int)mysql_num_rows(res_set);
-
-	cout << "ID Name" << endl;
-	for (int i = 0; i < num_rows; i++) {
-		row = mysql_fetch_row(res_set);
-		if (row != NULL) {
-			int num_cols = (int)mysql_num_fields(res_set);
-			for (int j = 0; j < num_cols; j++) {
-				printf("%-20s", row[j]);
-			}
-			cout << endl;
-		}
-	}
-
-	mysql_free_result(res_set);
-}
-
 static MYSQL_RES * ExecuteQuery(char * query) {
 	int status = mysql_query(conn, query);
 	if (status != 0) {
-		cout << "There was an error executing your query" << endl;
 		cout << "error: " << mysql_error(conn) << endl;
 		cout << "errorno: " << mysql_errno(conn) << endl;
 	}
@@ -150,7 +128,7 @@ void StudentMenu() {
 	while (1) {
 		cout << "<Student Menu>" << endl;
 		res_set = ExecuteQuery(query);
-		cout << "Student ID: " << userid << " Time:" << currentYear << " " << currentQuarter << endl;
+		cout << "Student ID: " << userid << " Time: " << currentYear << " " << currentQuarter << endl;
 		PrintQuery(res_set);
 		while (mysql_next_result(conn) == 0);
 		mysql_free_result(res_set);
@@ -163,10 +141,11 @@ void StudentMenu() {
 		while (choice <= 0 || choice > 5) {
 			cout << "Please enter a number from 1 to 5:";
 			cin >> choice;
-			if (cin.fail()) {
-				cin.ignore(INT_MAX, '\n');
-				cin.clear();
-			}
+			if (choice >= 1 && choice <= 5)
+				break;
+			cin.clear();
+			cin.ignore(INT_MAX, '\n');
+
 		}
 		switch (choice) {
 		case 1:
@@ -195,15 +174,15 @@ void StudentMenu() {
 
 void UserPause() {
 	cout << "press enter to continue." << endl;
-	cin.ignore(INT_MAX, '\n');
 	cin.clear();
+	cin.ignore(INT_MAX, '\n');
 	cin.get();
 }
 
 void Transcript() {
 	MYSQL_RES * res_set;
-	string input = "xxxx0000";
-	string all_courses = "";
+	int input = INT_MAX;
+	unordered_map<int, string> all_courses = {};
 	char query[256];
 	sprintf_s(query, sizeof(query),"CALL transcript(%d)",userid);
 	
@@ -217,7 +196,8 @@ void Transcript() {
 	for (int i = 0; i < num_rows; i++) {
 		row = mysql_fetch_row(res_set);
 		if (row != NULL) {
-			all_courses += string(row[0]) + ",";
+			all_courses.insert({ i+1,string(row[0])});
+			cout << i+1 << ": ";
 			for (int j = 0; j < num_cols; j++) {
 				printf("%-20s", row[j]);
 			}
@@ -228,22 +208,26 @@ void Transcript() {
 	mysql_free_result(res_set);
 	UserPause();
 	while (1) {
-		while (all_courses.find(input) == string::npos) {
-			cout << "Input the id of the course you want more information on" << endl;
-			cout << "Input 'q' to quit" << endl;
-			getline(cin, input);
-			if (input.compare("q") == 0) {
+		while (all_courses.find(input) == all_courses.end()) {
+			cout << "Input the index of the course (on the left) you want more information on" << endl;
+			cout << "Input '-1' to quit" << endl;
+			cin >> input;
+			if (cin.fail()) {
+				cin.clear();
+				cin.ignore(INT_MAX, '\n');
+			}
+			if (input == -1) {
 				return;
 			}
 		}
-		cout << "Input accepted!" << endl;
-		sprintf_s(query, sizeof(query), "CALL course_detail(%d,\"%s\")", userid, input.c_str());
+		// cout << "Input accepted!" << endl;
+		sprintf_s(query, sizeof(query), "CALL course_detail(%d,\"%s\")", userid, all_courses.find(input)->second.c_str());
 		res_set = ExecuteQuery(query);
 		cout << "Course Code, Course Title, Year, Semester, Grade, Name, Enrollment, Max Enrollment" << endl;
 		PrintQuery(res_set);
 		while (mysql_next_result(conn) == 0);
 		mysql_free_result(res_set);
-		input = "xxxx0000";
+		input = INT_MAX;
 	}
 	
 }
@@ -253,8 +237,8 @@ void Enroll() {
 	cout << "<Enroll>" << endl;
 	cout << "Courses Offered" << endl;
 	char query[256];
-	string all_courses = "";
-	string inputCode, inputYear, inputSem;
+	unordered_map<int, string> all_courses = {};
+	int input = INT_MAX;
 	sprintf_s(query, sizeof(query), "CALL ShowOfferings()");
 	res_set = ExecuteQuery(query);
 
@@ -264,7 +248,13 @@ void Enroll() {
 	for (int i = 0; i < num_rows; i++) {
 		row = mysql_fetch_row(res_set);
 		if (row != NULL) {
-			all_courses += "|" + string(row[0]) + string(row[1]) + string(row[2]) + "|";
+			sprintf_s(query, sizeof(query), "CALL EnrollStudent(%d,\"%s\",\"%s\",%s)",
+				userid,
+				row[0],
+				row[1],
+				row[2]);
+			all_courses.insert({ i+1,string(query) });
+			cout << i+1 << ": ";
 			for (int j = 0; j < num_cols; j++) {
 				printf("%-.20s ", row[j]);
 			}
@@ -273,37 +263,26 @@ void Enroll() {
 	}
 	while (mysql_next_result(conn) == 0);
 	mysql_free_result(res_set);
-	UserPause();
-	inputCode = "x";
-	inputYear = "y";
-	inputSem = "z";
+	//UserPause();
 	
 	while (1) {
-		
-		while (1) {
-			cout << "Enter a course code, year, and semester (q to quit)" << endl;
-			cout << "course code: ";
-			getline(cin, inputCode);
-			cout << "year: ";
-			getline(cin, inputYear);
-			cout << "semester: ";
-			getline(cin, inputSem);
-			if (!inputCode.compare("q") || !inputYear.compare("q") || !inputSem.compare("q"))
-				return;
-			if (all_courses.find(inputCode + inputSem + inputYear) == string::npos)
-				cout << "bad input combination" << endl;
-			else
-				break;
-		}
+
+			while (all_courses.find(input) == all_courses.end()) {
+				cout << "Input the index of the course (on the left)" << endl;
+				cout << "Input '-1' to quit" << endl;
+				cin >> input;
+				if (cin.fail()) {
+					cin.clear();
+					cin.ignore(INT_MAX, '\n');
+				}
+				if (input == -1) {
+					return;
+				}
+			}
 		cout << "Input accepted!" << endl;
-		sprintf_s(query, sizeof(query), "CALL EnrollStudent(%d,\"%s\",\"%s\",%s)",
-			userid,	
-			inputCode.c_str(),
-			inputSem.c_str(),
-			inputYear.c_str());
-		res_set = ExecuteQuery(query);
+		cout << all_courses.find(input)->second.c_str() << endl;
+		res_set = ExecuteQuery((char*) (all_courses.find(input)->second.c_str()));
 		if (res_set && mysql_num_rows(res_set) > 0) {
-			cout << inputCode << endl;
 			cout << "Some requirements were not met:" << endl;
 			PrintQuery(res_set);
 		}
@@ -312,46 +291,127 @@ void Enroll() {
 		}
 		while (mysql_next_result(conn) == 0);
 		mysql_free_result(res_set);
-		inputCode = "x";
-		inputYear = "y";
-		inputSem = "z";
+		input = INT_MAX;
 	}
 	
 	UserPause();
 }
 
 void Withdraw() {
+	MYSQL_RES * res_set;
+	int input = INT_MAX;
+	unordered_map<int, string> all_courses = {};
+	char query[256];
+	sprintf_s(query, sizeof(query), "CALL transcript(%d)", userid);
+
+	res_set = ExecuteQuery(query);
 	cout << "<Withdraw>" << endl;
-	// TODO: Fill out withdraw queries with procedure call
-	UserPause();
+	cout << "Your transcript is displayed below:" << endl;
+	int num_rows = (int)mysql_num_rows(res_set);
+	int num_cols = (int)mysql_num_fields(res_set);
+	MYSQL_ROW row;
+	for (int i = 0; i < num_rows; i++) {
+		row = mysql_fetch_row(res_set);
+		if (row != NULL) {
+			sprintf_s(query, sizeof(query), "CALL withdraw(%d,\"%s\",%s,\"%s\")",
+				userid,
+				row[0],
+				row[1],
+				row[3]);
+			all_courses.insert({ i + 1,string(query) });
+			cout << i + 1 << ": ";
+			for (int j = 0; j < num_cols; j++) {
+				printf("%-20s", row[j]);
+			}
+			cout << endl;
+		}
+	}
+	while (mysql_next_result(conn) == 0);
+	mysql_free_result(res_set);
+	//UserPause();
+
+	while (1) {
+
+		while (all_courses.find(input) == all_courses.end()) {
+			cout << "Input the index of the course you want to withdraw from(on the left)" << endl;
+			cout << "Input '-1' to quit" << endl;
+			cin >> input;
+			if (cin.fail()) {
+				cin.clear();
+				cin.ignore(INT_MAX, '\n');
+			}
+			if (input == -1) {
+				return;
+			}
+		}
+		cout << all_courses.find(input)->second.c_str() << endl;
+		int status = mysql_query(conn, (char*)(all_courses.find(input)->second.c_str()));
+		res_set = mysql_store_result(conn);
+		if (mysql_errno(conn) != 0) {
+			cout << "error: " << mysql_error(conn) << endl;
+		}
+		else if (res_set && mysql_num_rows(res_set) > 0) {
+			cout << "message:" << endl;
+			PrintQuery(res_set);
+		}
+		else {
+			cout << "Withdraw Successful" << endl;
+		}
+		while (mysql_next_result(conn) == 0);
+		mysql_free_result(res_set);
+		input = INT_MAX;
+	}
 }
 
 void PersonalDetails() {
+	MYSQL_RES * res_set;
 	int choice = 0;
 	string new_word;
+	char query[256];
+	sprintf_s(query, sizeof(query), "SELECT * FROM student where Id = %d", userid);
+	string curr_password;
+	string curr_address;
 	while (1) {
 		cout << "<Personal Details>" << endl;
 		cout << "Your personal details are displayed below:" << endl;
-		// TODO: Fill out personal detail queries
+		cout << "ID, Name, Password, Address" << endl;
+		sprintf_s(query, sizeof(query), "SELECT * FROM student where Id = %d", userid);
+		res_set = ExecuteQuery(query);
+		MYSQL_ROW row = mysql_fetch_row(res_set);
+		curr_password = row[2];
+		curr_address = row[3];
+		cout << row[0] << " " << row[1] << " " << curr_password << " " << curr_address << endl;
+		while (mysql_next_result(conn) == 0);
+		mysql_free_result(res_set);
 		while (choice <= 0 || choice > 3) {
 			cout << "Please enter a number between 1 and 3" << endl;
 			cout << "1. Change your password." << endl;
 			cout << "2. Change your address." << endl;
 			cout << "3. Return to student menu." << endl;
 			cin >> choice;
+			if (cin.fail()) {
+				cin.clear();
+				cin.ignore(INT_MAX, '\n');
+			}
 		}
-		cin.ignore(INT_MAX, '\n');
 		cin.clear();
+		cin.ignore(INT_MAX, '\n');
 		switch (choice) {
 		case 1:
 			cout << "new password: ";
 			getline(cin, new_word);
-			// TODO: update password
+			sprintf_s(query, sizeof(query), "CALL update_person(%d,\"%s\",\"%s\")",userid,new_word.c_str(),curr_address.c_str());
+			res_set = ExecuteQuery(query);
+			while (mysql_next_result(conn) == 0);
+			mysql_free_result(res_set);
 			break;
 		case 2:
 			cout << "new address: ";
 			getline(cin, new_word);
-			// TODO: update address
+			sprintf_s(query, sizeof(query), "CALL update_person(%d,\"%s\",\"%s\")", userid, curr_password.c_str(), new_word.c_str());
+			res_set = ExecuteQuery(query);
+			while (mysql_next_result(conn) == 0);
+			mysql_free_result(res_set);
 			break;
 		case 3:
 			return;
