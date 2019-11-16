@@ -23,9 +23,16 @@ begin
     THEN
 		SELECT "You cannot withdraw from a class from previous year";
     ELSE
+		CREATE TABLE tmp as select 0 as flag;
 		delete from transcript where Studid = sid and UoSCode = cid and year = y_ear and Semester = s_emester;
 		update uosoffering set Enrollment = Enrollment -1 where UoScode = cid and year =y_ear and Semester = s_emester;
-        show warnings;
+        if (select flag from tmp) = 1
+        then
+			drop table tmp;
+			select "Drop successful, but enrollment has dropped below 50%";
+		else
+			drop table tmp;
+        end if;
     END IF;
  
 end $$

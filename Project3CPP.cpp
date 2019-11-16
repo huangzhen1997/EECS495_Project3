@@ -223,7 +223,7 @@ void Transcript() {
 		// cout << "Input accepted!" << endl;
 		sprintf_s(query, sizeof(query), "CALL course_detail(%d,\"%s\")", userid, all_courses.find(input)->second.c_str());
 		res_set = ExecuteQuery(query);
-		cout << "Course Code, Course Title, Year, Semester, Grade, Name, Enrollment, Max Enrollment" << endl;
+		cout << "Course Code, Course Title, Year, Semester, Lecture Name, Enrollment, Max Enrollment, Grade" << endl;
 		PrintQuery(res_set);
 		while (mysql_next_result(conn) == 0);
 		mysql_free_result(res_set);

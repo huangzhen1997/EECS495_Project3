@@ -6,7 +6,7 @@ create procedure course_detail(
 )
 begin
 	
-select o.UoSCode,u.UoSName, o.Enrollment,o.MaxEnrollment,o.Year,o.Semester,f.Name
+select o.UoSCode,u.UoSName,o.Year,o.Semester,f.Name, o.Enrollment,o.MaxEnrollment, t.Grade
  from unitofstudy as u
  inner join uosoffering as o
 	on o.UoSCode=u.UoSCode
