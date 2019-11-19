@@ -236,10 +236,14 @@ void Transcript() {
 			"Enrollment",
 			"Max Enrollment",
 			"Grade" };
-		row = mysql_fetch_row(res_set);
+		
+		int num_rows = (int)mysql_num_rows(res_set);
 		int num_cols = (int)mysql_num_fields(res_set);
-		for (int j = 0; j < num_cols; j++) {
-			printf("%s: %s\n",index[j].c_str(),row[j]);
+		for (int i = 0; i < num_rows; i++) {
+			row = mysql_fetch_row(res_set);
+			for (int j = 0; j < num_cols; j++) {
+				printf("%s: %s\n", index[j].c_str(), row[j]);
+			}
 		}
 		//PrintQuery(res_set);
 		while (mysql_next_result(conn) == 0);
