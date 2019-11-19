@@ -26,11 +26,11 @@ begin
     THEN
 		SELECT "You cannot withdraw from a class that has already completed";
     ELSE
-		CREATE TABLE tmp as select 0 as flag;
+		
         START TRANSACTION;
+        CREATE TABLE tmp as select 0 as flag;
 		delete from transcript where Studid = sid and UoSCode = cid and year = y_ear and Semester = s_emester;
 		update uosoffering set Enrollment = Enrollment -1 where UoScode = cid and year =y_ear and Semester = s_emester;
-        COMMIT;
         if (select flag from tmp) = 1
         then
 			drop table tmp;
@@ -38,6 +38,8 @@ begin
 		else
 			drop table tmp;
         end if;
+        COMMIT;
+        
     END IF;
  
 end $$
