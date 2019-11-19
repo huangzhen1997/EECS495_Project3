@@ -30,4 +30,4 @@ OR
 end $$
 delimiter ;
 
-CALL ShowOfferings();
+-- CALL ShowOfferings();

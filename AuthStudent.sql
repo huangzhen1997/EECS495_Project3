@@ -8,5 +8,5 @@ BEGIN
 END //
 delimiter ;
 
-CALL AuthStudent("Harry Jenkins","butterflY");
+-- CALL AuthStudent("Harry Jenkins","butterflY");
 
