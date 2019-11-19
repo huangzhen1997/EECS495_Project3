@@ -20,6 +20,6 @@ end $$
 delimiter ;
 
 
-call course_detail(3213,'COMP2007')
+call course_detail(5123,'COMP2007')
 
 

@@ -16,12 +16,15 @@ begin
 	ELSE
 		SET curSem = "Q1";
 	END IF;
-    IF (select grade from transcript where UoSCode = cid and year = y_ear and Semester = s_emester) IS NOT NULL
+    IF NOT EXISTS(select * from transcript where StudId = sid and UoSCode = cid and year = y_ear and Semester = s_emester)
+    THEN
+     SELECT "You are not currently enrolled in this class";
+    ELSEIF (select grade from transcript where StudId = sid and UoSCode = cid and year = y_ear and Semester = s_emester) IS NOT NULL
     THEN
 		SELECT "You cannot withdraw from a completed class";
 	ELSEIF (curYear = y_ear AND curSem > s_emester) OR curYear > y_ear
     THEN
-		SELECT "You cannot withdraw from a class from previous year";
+		SELECT "You cannot withdraw from a class that has already completed";
     ELSE
 		CREATE TABLE tmp as select 0 as flag;
         START TRANSACTION;

@@ -1,10 +1,16 @@
 delimiter $$
 drop procedure if exists transcript $$
 create procedure transcript(
-	in sid char(20)
+	in sid int
 )
 begin
-select UoSCode,Year,Grade,Semester from student as s natural join transcript as t where s.id = t.StudId and s.id = sid order by Year;
+	select UoSCode,Year,Grade,Semester
+	from
+		student
+	inner join
+		transcript
+	where
+		student.Id = transcript.StudId AND student.Id = sid order by Year;
 end $$
 delimiter ;
 
