@@ -8,4 +8,4 @@ select UoSCode,Year,Grade,Semester from student as s natural join transcript as 
 end $$
 delimiter ;
 
-call transcript(5123)
+-- call transcript(5123);
