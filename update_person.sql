@@ -12,4 +12,4 @@ begin
 end $$
 delimiter ;
 
-call update_person(3213,'lunch','Cronulla');
+-- call update_person(3213,'lunch','Cronulla');
