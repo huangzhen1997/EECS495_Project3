@@ -107,6 +107,14 @@ void Login() {
 			else {
 				MYSQL_ROW row = mysql_fetch_row(res_set);
 				userid = atoi(row[0]);
+				// check case sensitivity
+				string username_t = string(row[1]);
+				string password_t = string(row[2]);
+				if (password_t.compare(password) != 0 
+					|| username_t.compare(username) != 0) {
+					cout << "Invalid username or password" << endl;
+					userid = 0;
+				}
 			}
 			// free any results before executing next query
 			while(mysql_next_result(conn) == 0);
