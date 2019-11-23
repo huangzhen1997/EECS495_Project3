@@ -13,6 +13,7 @@ IF EXISTS (SELECT *
 			requires r
 			WHERE
 			r.UoSCode = ccode
+            AND r.EnforcedSince <= curdate()
 			AND r.PrereqUoSCode not in 
 			(SELECT 
 				UoSCode
@@ -24,7 +25,8 @@ IF EXISTS (SELECT *
 THEN
 	SELECT PrereqUoSCode
 	FROM requires
-	WHERE UoSCode = ccode;
+	WHERE UoSCode = ccode
+    AND EnforcedSince <= curdate();
 ELSEIF 	EXISTS (select * from transcript
 		where StudId = sid and UoSCode = ccode and Semester = sem and Year = y)
 THEN
